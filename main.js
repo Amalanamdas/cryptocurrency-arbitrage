@@ -8,7 +8,7 @@
 console.log('Starting app...');
 
 const request = require('request'), Promise = require("bluebird"); //request for pulling JSON from api. Bluebird for Promises.
-
+const growl = require('node-notifier');
 const express = require('express'),
     app = express(),
     helmet = require('helmet'),
@@ -118,7 +118,7 @@ async function computePrices(data) {
 
                                     }
                                 );
-                                
+
                                 // db.insert({
                                 //     coin: coin,
                                 //     lastSpread: arr[i][0] / arr[j][0],
@@ -149,8 +149,25 @@ async function computePrices(data) {
     await loopData();
 
     console.log("Emitting Results...")
-
+    function notifier(result) {
+        // if (result.spread-1 >= 0.4) {
+            if (result.spread >= 2) {
+            growl.notify({
+                message : "TRANSFER " + result.coin + " FROM " + result.market2.name + " TO " + result.market1.name + " FOR A PROFIT OF " + parseFloat(result.spread).toFixed(2),
+                wait : true,
+                timeout : 30
+            },function(err, data) {
+                // Will also wait until notification is closed.
+                console.log('Waited');
+                console.log(err, data);
+            }).on('click', function() {
+                console.log(arguments);
+            })
+        }
+    }
+    results.filter(notifier);
     io.emit('results', results);
+
 }
 
 
@@ -163,9 +180,9 @@ async function computePrices(data) {
 
     await Promise.all(arrayOfRequests.map(p => p.catch(e => e)))
 
-        .then(results => computePrices(coin_prices))
+.then(results => computePrices(coin_prices))
 
-        .catch(e => console.log(e));
+.catch(e => console.log(e));
 
     setTimeout(main, 10000);
 })();
